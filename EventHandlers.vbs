@@ -35,9 +35,13 @@ Sub SendNDR(oMessage)
 	sNDRBody = Replace(sNDRBody, "%MACRO_SUBJECT%", oMessage.Subject)
 	sNDRBody = Replace(sNDRBody, "%MACRO_TO%", oMessage.To)
 	sNDRBody = Replace(sNDRBody, "%MACRO_FROM%", oMessage.From)
-	sEnvelopeRecipients = "    " & Replace(oMessage.HeaderValue("X-Envelope-Recipients"), ",", vbCRLF & "    ")
-	sReason = "One or more of following addresses was unreachable: " & vbCRLF & vbCRLF & sEnvelopeRecipients
-	sNDRBody = Replace(sNDRBody, "%MACRO_RECIPIENTS%", sReason)
+	aEnvelopeRecipients = Split(oMessage.HeaderValue("X-Envelope-Recipients"), ",")
+	for each sEnvelopeRecipient in aEnvelopeRecipients
+		if not IsDeliverable(sEnvelopeRecipient) then
+			sEnvelopeRecipients = sEnvelopeRecipients & "    " & sEnvelopeRecipient & vbCRLF
+		end if
+	next
+	sNDRBody = Replace(sNDRBody, "%MACRO_RECIPIENTS%", sEnvelopeRecipients)
 	set oNDR = CreateObject("hMailServer.Message")
 	oNDR.From = "mailer-daemon@" & oMailServer.Settings.HostName
 	oNDR.FromAddress = "mailer-daemon@" & oMailServer.Settings.HostName
@@ -60,6 +64,42 @@ function GetApplicationObject
 	set GetApplicationObject = oApplicationObject
 end function
 
+function IsDeliverable(sAddress)
+	IsDeliverable = false
+	set oMailServer = GetApplicationObject
+	on error resume next
+	set oDomain = oMailServer.Domains.ItemByName(DomainFromAddress(sAddress))
+	on error goto 0
+	if IsObject(oDomain) then
+		on error resume next
+		set oAccount = oDomain.Accounts.ItemByAddress(sAddress)
+		on error goto 0
+		if IsObject(oAccount) then
+			if oAccount.Active then
+				IsDeliverable = true
+			end if
+		end if
+	end if
+	if not IsDeliverable then
+		on error resume next
+		set oRoute = oMailServer.Settings.Routes.ItemByName(DomainFromAddress(sAddress))
+		on error goto 0
+		if IsObject(oRoute) then
+			if oRoute.AllAddresses then
+				IsDeliverable = true
+			else
+				if oRoute.Addresses.Count > 0 then 
+					for i = 0 to oRoute.Addresses.Count - 1
+						if oRoute.Addresses.Item(i).Address = sAddress then
+							IsDeliverable = true
+						end if
+					next
+				end if
+			end if
+		end if
+	end if
+end function			
+
 function CleanAddress(sAddress)
 	dim i
   i = InStrRev(sAddress, "<")
@@ -73,3 +113,14 @@ function CleanAddress(sAddress)
   end if
   CleanAddress = lcase(sAddress)
 end function
+
+function DomainFromAddress(sAddress)
+	dim aTemp
+	aTemp = Split(sAddress, "@")
+	if UBound(aTemp) > 0 then
+		DomainFromAddress = aTemp(1)
+	else
+		DomainFromAddress = sAddress
+	end if
+end function
+
