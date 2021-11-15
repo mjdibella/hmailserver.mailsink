@@ -94,6 +94,7 @@ function IsDeliverable(sAddress)
 		sDomainName = DomainFromAddress(sAddress)
 	else
 		sDomainName = oDomain.Name
+		sAddress = sUserName & "@" & sDomainName
 	end if	
 	if not IsDeliverable then
 		if (not IsObject(oDomain)) and (not IsObject(oRoute)) then
@@ -116,7 +117,7 @@ function IsDeliverable(sAddress)
 						IsDeliverable = true
 					else
 						on error resume next
-						set oDistributionList = oDomain.DistributionLists.ItemByAddress(sUserName & "@" & sDomainName)
+						set oDistributionList = oDomain.DistributionLists.ItemByAddress(sAddress)
 						on error goto 0
 						if IsObject(oDistributionList) then
 							IsDeliverable = true
@@ -144,7 +145,7 @@ function IsDeliverable(sAddress)
 			end if
 		end if
 	end if
-end function			
+end function	
 
 function CleanAddress(sAddress)
 	dim i
