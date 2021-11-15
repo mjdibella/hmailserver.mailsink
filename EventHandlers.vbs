@@ -35,7 +35,7 @@ Sub SendNDR(oMessage)
 	sNDRBody = Replace(sNDRBody, "%MACRO_SUBJECT%", oMessage.Subject)
 	sNDRBody = Replace(sNDRBody, "%MACRO_TO%", oMessage.To)
 	sNDRBody = Replace(sNDRBody, "%MACRO_FROM%", oMessage.From)
-	sEnvelopeRecipients = "  " & Replace(oMessage.HeaderValue("X-Envelope-Recipients"), ",", "  " & vbCRLF)
+	sEnvelopeRecipients = "    " & Replace(oMessage.HeaderValue("X-Envelope-Recipients"), ",", vbCRLF & "    ")
 	sReason = "One or more of following addresses was unreachable: " & vbCRLF & vbCRLF & sEnvelopeRecipients
 	sNDRBody = Replace(sNDRBody, "%MACRO_RECIPIENTS%", sReason)
 	set oNDR = CreateObject("hMailServer.Message")
