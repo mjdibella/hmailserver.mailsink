@@ -66,36 +66,35 @@ end function
 
 function IsDeliverable(sAddress)
 	IsDeliverable = false
+	sOriginalAddress = sAddress
 	sUserName = UsernameFromAddress(sAddress)
+	sOriginalDomain = DomainFromAddress(sAddress)
 	set oMailServer = GetApplicationObject
 	on error resume next
 	set oRoute = oMailServer.Settings.Routes.ItemByName(DomainFromAddress(sAddress))
+	set oDomain = oMailServer.Domains.ItemByName(DomainFromAddress(sAddress))
 	on error goto 0
-	' find domain by alias
-	if oMailServer.Domains.Count > 0 then
-		for i = 0 to oMailServer.Domains.Count - 1
-			if oMailServer.Domains(i).DomainAliases.Count > 0 then
-				for j = 0 to oMailServer.Domains(i).DomainAliases.Count - 1
-					if oMailServer.Domains(i).DomainAliases(j).AliasName = DomainFromAddress(sAddress) then
-						set oDomain = oMailServer.Domains.ItemByDBID(oMailServer.Domains(i).DomainAliases(j).DomainID)
+	if not IsObject(oDomain) then
+		' find domain by alias
+		if oMailServer.Domains.Count > 0 then
+			for i = 0 to oMailServer.Domains.Count - 1
+				if oMailServer.Domains(i).DomainAliases.Count > 0 then
+					for j = 0 to oMailServer.Domains(i).DomainAliases.Count - 1
+						if oMailServer.Domains(i).DomainAliases(j).AliasName = DomainFromAddress(sAddress) then
+							set oDomain = oMailServer.Domains.ItemByDBID(oMailServer.Domains(i).DomainAliases(j).DomainID)
+							exit for
+						end if
+					next
+					if IsObject(oDomain) then
 						exit for
 					end if
-				next
-				if IsObject(oDomain) then
-					exit for
 				end if
-			end if
-		next
+			next
+		end if
+		if IsObject(oDomain) then
+			sAddress = sUserName & "@" & oDomain.Name
+		end if
 	end if
-	if not IsObject(oDomain) then
-		on error resume next
-		set oDomain = oMailServer.Domains.ItemByName(DomainFromAddress(sAddress))
-		on error goto 0
-		sDomainName = DomainFromAddress(sAddress)
-	else
-		sDomainName = oDomain.Name
-		sAddress = sUserName & "@" & sDomainName
-	end if	
 	if not IsDeliverable then
 		if (not IsObject(oDomain)) and (not IsObject(oRoute)) then
 			' non-authorative domain, deliverable via relay
@@ -135,7 +134,7 @@ function IsDeliverable(sAddress)
 					else
 						if oRoute.Addresses.Count > 0 then 
 							for i = 0 to oRoute.Addresses.Count - 1
-								if oRoute.Addresses.Item(i).Address = sAddress then
+								if oRoute.Addresses.Item(i).Address = sOriginalAddress then
 									IsDeliverable = true
 								end if
 							next
@@ -145,7 +144,7 @@ function IsDeliverable(sAddress)
 			end if
 		end if
 	end if
-end function	
+end function
 
 function CleanAddress(sAddress)
 	dim i
