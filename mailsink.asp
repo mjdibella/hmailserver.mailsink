@@ -132,38 +132,87 @@
 
 	function IsDeliverable(sAddress)
 		IsDeliverable = false
+		sOriginalAddress = sAddress
+		sUserName = UsernameFromAddress(sAddress)
+		sOriginalDomain = DomainFromAddress(sAddress)
 		on error resume next
+		set oRoute = oMailServer.Settings.Routes.ItemByName(DomainFromAddress(sAddress))
 		set oDomain = oMailServer.Domains.ItemByName(DomainFromAddress(sAddress))
 		on error goto 0
-		if IsObject(oDomain) then
-			on error resume next
-			set oAccount = oDomain.Accounts.ItemByAddress(sAddress)
-			on error goto 0
-			if IsObject(oAccount) then
-				if oAccount.Active then
-					IsDeliverable = true
-				end if
-			end if
-		end if
-		if not IsDeliverable then
-			on error resume next
-			set oRoute = oMailServer.Settings.Routes.ItemByName(DomainFromAddress(sAddress))
-			on error goto 0
-			if IsObject(oRoute) then
-				if oRoute.AllAddresses then
-					IsDeliverable = true
-				else
-					if oRoute.Addresses.Count > 0 then 
-						for i = 0 to oRoute.Addresses.Count - 1
-							if oRoute.Addresses.Item(i).Address = sAddress then
-								IsDeliverable = true
+		if not IsObject(oDomain) then
+			' find domain by alias
+			if oMailServer.Domains.Count > 0 then
+				for i = 0 to oMailServer.Domains.Count - 1
+					if oMailServer.Domains(i).DomainAliases.Count > 0 then
+						for j = 0 to oMailServer.Domains(i).DomainAliases.Count - 1
+							if oMailServer.Domains(i).DomainAliases(j).AliasName = DomainFromAddress(sAddress) then
+								set oDomain = oMailServer.Domains.ItemByDBID(oMailServer.Domains(i).DomainAliases(j).DomainID)
+								exit for
 							end if
 						next
+						if IsObject(oDomain) then
+							exit for
+						end if
+					end if
+				next
+			end if
+			if IsObject(oDomain) then
+				sAddress = sUserName & "@" & oDomain.Name
+			end if
+		end if
+		if (not IsObject(oDomain)) and (not IsObject(oRoute)) then
+			' non-authorative domain, deliverable via relay
+			IsDeliverable = true
+		else
+			if IsObject(oDomain) then
+				if oDomain.Postmaster <> "" then
+					' catch-all enabled
+					IsDeliverable = true
+				else
+					on error resume next
+					set oAccount = oDomain.Accounts.ItemByAddress(sAddress)
+					on error goto 0
+					if IsObject(oAccount) then
+						if oAccount.Active then
+							IsDeliverable = true
+						end if
+					else
+						on error resume next
+						set oAlias = oDomain.Aliases.ItemByName(sAddress)
+						on error goto 0
+						if IsObject(oAlias) then
+							IsDeliverable = true
+						else
+							on error resume next
+							set oDistributionList = oDomain.DistributionLists.ItemByAddress(sAddress)
+							on error goto 0
+							if IsObject(oDistributionList) then
+								IsDeliverable = true
+							end if
+						end if
+					end if
+				end if
+			end if
+			if not IsDeliverable then
+				on error resume next
+				set oRoute = oMailServer.Settings.Routes.ItemByName(sDomainName)
+				on error goto 0
+				if IsObject(oRoute) then
+					if oRoute.AllAddresses then
+						IsDeliverable = true
+					else
+						if oRoute.Addresses.Count > 0 then 
+							for i = 0 to oRoute.Addresses.Count - 1
+								if oRoute.Addresses.Item(i).Address = sOriginalAddress then
+									IsDeliverable = true
+								end if
+							next
+						end if
 					end if
 				end if
 			end if
 		end if
-	end function			
+	end function
 
 	function CleanAddress(sAddress)
 		dim i
