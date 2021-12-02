@@ -77,6 +77,8 @@
 			Response.Write "Message dispatched to " & sEnvelopeRecipients
 		else
 			Response.Write "No valid recipients to dispatch."
+			' delete the message without saving
+			objFS.DeleteFile sFileName
 		end if
 		if Len(sFailedRecipients) > 0 then
 			SendNDR oMessage, sFailedRecipients
