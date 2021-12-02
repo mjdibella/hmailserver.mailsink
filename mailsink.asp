@@ -66,13 +66,20 @@
 					sEnvelopeRecipients = sEnvelopeRecipient
 				end if
 			else
-				sFailedRecipients = sFailedRecipients & "    " & sEnvelopeRecipient & vbCRLF
+				if Len(sFailedRecipients) > 0 then
+					sFailedRecipients = sFailedRecipients & "," & sEnvelopeRecipient
+					sNDRReport = sNDRReport & vbCRLF & "    " & sEnvelopeRecipient
+				else 
+					sFailedRecipients = sEnvelopeRecipient
+					sNDRReport = "    " & sEnvelopeRecipient
+				end if
 			end if
 		next
 		if bValidRecipient then
 			oMessage.HeaderValue("To") = sOriginalTo
 			oMessage.HeaderValue("CC") = sOriginalCC
 			oMessage.HeaderValue("X-Envelope-Recipients") = sEnvelopeRecipients
+			oMessage.HeaderValue("X-Failed-Recipients") = sFailedRecipients
 			oMessage.Save
 			Response.Write "Message dispatched to " & sEnvelopeRecipients
 		else
@@ -81,7 +88,7 @@
 			objFS.DeleteFile sFileName
 		end if
 		if Len(sFailedRecipients) > 0 then
-			SendNDR oMessage, sFailedRecipients
+			SendNDR oMessage, sNDRReport
 		end if
 	end sub
 
