@@ -53,8 +53,12 @@
 		oMessage.RefreshContent
 		sOriginalTo = oMessage.HeaderValue("To")
 		sOriginalCC = oMessage.HeaderValue("CC")
+		sOrigionalFrom = oMessage.HeaderValue("From")
 		oMessage.ClearRecipients
 		set oRecipients = oPostJson.Receipt.Recipients
+		sEnvelopeFrom = oPostJson.Mail.Source
+		oMessage.FromAddress = sEnvelopeFrom
+		oMessage.HeaderValue("X-Envelope-From") = sEnvelopeFrom
 		bValidRecipient = false
 		for each sEnvelopeRecipient in oRecipients
 			if IsDeliverable(sEnvelopeRecipient) then
@@ -79,7 +83,9 @@
 			oMessage.HeaderValue("To") = sOriginalTo
 			oMessage.HeaderValue("CC") = sOriginalCC
 			oMessage.HeaderValue("X-Envelope-Recipients") = sEnvelopeRecipients
-			oMessage.HeaderValue("X-Failed-Recipients") = sFailedRecipients
+			if Len(sFailedRecipients) > 0 then
+				oMessage.HeaderValue("X-Failed-Recipients") = sFailedRecipients
+			end if
 			oMessage.Save
 			Response.Write "Message dispatched to " & sEnvelopeRecipients
 		else
@@ -131,7 +137,7 @@
 		oNDR.Subject = "Message undeliverable: " & oMessage.Subject
 		sReturnPath = CleanAddress(oMessage.HeaderValue("Return-Path"))
 		if Len(sReturnPath) = 0 then
-			sReturnPath = CleanAddress(oMessage.From)
+			sReturnPath = CleanAddress(sEnvelopeFrom)
 		end if
 		oNDR.AddRecipient "", sReturnPath
 		oNDR.HeaderValue("To") = sReturnPath
