@@ -1,4 +1,5 @@
 2021-12-01 Integrated address validation and NDR generation routines previously handled by Rule. Callback handler now validates envelope recipients based on authoritative addresses supported in the current HMS configuration and generates NDRs when invalid envelope recipients are received by callback. EventHandlers.vbs is deprecated and catch-all address is no longer required.
 2021-12-01 Moved runtime configuration for the handler to the registry.
-2021-12-01 Hander now returns "503 Service unavailable" if HMS authentication fails
-2021-12-04 Add headers for envelope sender (X-Envelope-From) and envelope recipients (X-Envelope-Recipients, X-Failed-Recipients)
+2021-12-01 Hander now returns "503 Service unavailable" if HMS authentication fails.
+2021-12-04 Add headers for envelope sender (X-Envelope-From) and envelope recipients (X-Envelope-Recipients, X-Failed-Recipients).
+2021-12-07 Add backscatter suppression.  Send NDRs only to verified originators.
