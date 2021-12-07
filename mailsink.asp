@@ -94,7 +94,11 @@
 			objFS.DeleteFile sFileName
 		end if
 		if Len(sFailedRecipients) > 0 then
-			SendNDR oMessage, sNDRReport
+			' backscatter suppression -- only send NDR to verified originators
+			' return values: PASS|FAIL|GREY|PROCESSING_FAILED
+			if RegExTest(oPostJson.receipt.dkimVerdict.status, "PASS") and RegExTest(oPostJson.receipt.spfVerdict.status, "PASS") then
+				SendNDR oMessage, sNDRReport
+			end if
 		end if
 	end sub
 
@@ -231,16 +235,16 @@
 
 	function CleanAddress(sAddress)
 		dim i
-	  i = InStrRev(sAddress, "<")
-	  if i > 0 then
-		sAddress = Mid(sAddress, i + 1)
-		i = InStr(sAddress, ">")
+		i = InStrRev(sAddress, "<")
 		if i > 0 then
-			sAddress = Mid(sAddress, 1, i - 1)
+			sAddress = Mid(sAddress, i + 1)
+			i = InStr(sAddress, ">")
+			if i > 0 then
+				sAddress = Mid(sAddress, 1, i - 1)
+			end if
+			sAddress = CleanAddress(sAddress)
 		end if
-		sAddress = CleanAddress(sAddress)
-	  end if
-	  CleanAddress = lcase(sAddress)
+		CleanAddress = lcase(sAddress)
 	end function
 
 	function DomainFromAddress(sAddress)
@@ -261,5 +265,13 @@
 		else
 			UsernameFromAddress = sAddress
 		end if
+	end function
+	
+	function RegExTest(sValue, sPattern)
+		set oRegEx = new RegExp
+		oRegEx.Pattern = sPattern
+		oRegEx.IgnoreCase = true
+		oRegEx.Global     = true
+		RegExTest = oRegEx.Test(sValue)
 	end function
 %>
